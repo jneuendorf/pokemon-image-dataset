@@ -1,9 +1,8 @@
+# pokemon-image-dataset
 
 
-## Commands
 
-- `scrapy crawl list -O pokemon_list.json`
-- `scrapy crawl images`
+## Stats
 
 
 
