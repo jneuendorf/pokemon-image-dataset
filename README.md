@@ -20,7 +20,7 @@ A Pokémon image dataset for training neural networks. All contained images are 
 - [x] diamond-pearl-frame2
 - [x] dream-world
 - [x] emerald
-- [ ] emerald-animated
+- [x] emerald-animated
 - [x] emerald-frame2
 - [x] firered-leafgreen
 - [x] gold
@@ -40,8 +40,8 @@ A Pokémon image dataset for training neural networks. All contained images are 
 
 
 
-- [ ] split animations into frames
-- [ ] convert sugimori to png (before normalization)
+- [x] split animations into frames
+- [x] convert sugimori to png (before normalization)
 - [ ] pytorch dataset/dataloader
 - [ ] basic attributes for easily pre-filtering the dataloader, e.g. `PokemonDataset(type='fire)`
 
