@@ -1,0 +1,3 @@
+[submodule "pokemon-image-dataset-files"]
+	path = pokemon-image-dataset-files
+	url = git@github.com:jneuendorf/pokemon-image-dataset-files.git
