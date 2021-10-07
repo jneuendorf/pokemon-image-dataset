@@ -36,14 +36,14 @@ A Pokémon image dataset for training neural networks. All contained images are 
 - [x] sugimori
 - [x] yellow
 - [x] yellow-gbc
-
+- [ ] https://zukan.pokemon.co.jp/
+- [ ] https://play.pokemonshowdown.com/sprites/dex/
 
 
 
 - [x] split animations into frames
 - [x] convert sugimori to png (before normalization)
-- [ ] pytorch dataset/dataloader
-- [ ] basic attributes for easily pre-filtering the dataloader, e.g. `PokemonDataset(type='fire)`
+- [x] pytorch dataset/dataloader
 
 
 
@@ -51,6 +51,8 @@ A Pokémon image dataset for training neural networks. All contained images are 
 
 - https://veekun.com/dex/downloads
 - https://www.pokecommunity.com/showthread.php?t=416344
+
+
 
 ### Unused
 
