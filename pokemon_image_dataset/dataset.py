@@ -1,7 +1,7 @@
 from pathlib import Path
 import shutil
 import tempfile
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from torchvision.datasets import ImageFolder
 
@@ -21,8 +21,14 @@ CHECKSUM_BY_VERSION = {
 
 class PokemonImageDataset(ImageFolder):
 
-    MAIN_URL = 'https://github.com/jneuendorf/pokemon-image-dataset-files/archive/refs/heads/main.zip'
-    VERSION_URL = 'https://github.com/jneuendorf/pokemon-image-dataset-files/archive/refs/tags/{version}.zip'
+    MAIN_URL = (
+        'https://github.com/jneuendorf/pokemon-image-dataset-files/'
+        'archive/refs/heads/main.zip'
+    )
+    VERSION_URL = (
+        'https://github.com/jneuendorf/pokemon-image-dataset-files/'
+        'archive/refs/tags/{version}.zip'
+    )
 
     def __init__(
             self,

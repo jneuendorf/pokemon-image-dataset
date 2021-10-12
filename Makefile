@@ -1,3 +1,7 @@
+.PHONY: main
+main: activate
+	python main.py
+
 init_macos:
 	brew install imagemagick
 	@# pipenv install
@@ -6,6 +10,7 @@ init_macos:
 package_list:
 	conda list -n pokemon-image-dataset --export > package-list.txt
 
+.PHONY: activate
 activate:
 	conda activate pokemon-image-dataset
 
@@ -13,6 +18,10 @@ activate:
 # 	conda install -c conda-forge $1
 
 # all: arrange_files normalize_sizes
+
+.PHONY: lint
+lint:
+	pylint pokemon_image_dataset
 
 arrange_files:
 	bash src/arrange_files.sh
