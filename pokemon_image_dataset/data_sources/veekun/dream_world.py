@@ -48,6 +48,7 @@ class DreamWorld(SpriteSetDataSource):
             'dream-world/648': get_form(648, 'aria'),
         })
 
+    # TODO: Use wand? https://stackoverflow.com/a/19718153/6928824
     def svg2png(self):
         dest = self.tmp_dir / 'dream-world'
         for filename in dest.iterdir():

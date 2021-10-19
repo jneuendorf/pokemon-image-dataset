@@ -10,6 +10,7 @@ import numpy as np
 from skimage.color import gray2rgb, rgba2rgb
 from skimage.io import imread
 from skimage.transform import rescale
+from tqdm import tqdm
 from wand.image import Image
 
 from pokemon_image_dataset.data_sources import (BattlersDataSource, DataSource,
@@ -66,11 +67,9 @@ def remove_adjacent_duplicates(data_sources: Tuple[DataSource]) -> None:
                 dest.iterdir(),
                 key=filename_key,
             ))
-            for a, b in zip(files[:-1], files[1:]):
+            for a, b in tqdm(zip(files[:-1], files[1:]), total=len(files) - 1):
                 if filecmp.cmp(a, b, shallow=False):
                     duplicates.add(b)
-                    print('.', end='')
-            print()
             for file in sorted(duplicates):
                 file.unlink()
                 print('removed duplicate', file)
@@ -79,7 +78,7 @@ def remove_adjacent_duplicates(data_sources: Tuple[DataSource]) -> None:
 def normalize_images(data_sources: Tuple[DataSource]) -> None:
     for data_source in data_sources:
         print(f'normalizing images for {data_source.__class__.__name__}')
-        for filename in data_source.get_files():
+        for filename in tqdm(sorted(data_source.get_files())):
             with Image(filename=filename) as img:
                 bbox = get_bbox(img)
 
@@ -117,8 +116,8 @@ def normalize_images(data_sources: Tuple[DataSource]) -> None:
 
 def copy_images_to_data_repo(data_sources: Tuple[DataSource]) -> None:
     for data_source in data_sources:
-        print(f'moving images of {data_source.__class__.__name__}')
-        for filename in data_source.get_files():
+        print(f'copying images of {data_source.__class__.__name__}')
+        for filename in tqdm(sorted(data_source.get_files())):
             sprite_set = filename.parent.name
             ndex, *form = dename(filename.stem)
             dest_dir = DATA_REPO_DIR / ndex
@@ -148,11 +147,11 @@ if __name__ == '__main__':
             BattlersDataSource,
         )
     )
-    # print('\nRUNNING DATA SOURCES')
-    # run_data_sources(data_sources)
+    print('\nRUNNING DATA SOURCES')
+    run_data_sources(data_sources)
 
-    # print('\nREMOVING DUPLICATES')
-    # remove_adjacent_duplicates(data_sources)
+    print('\nREMOVING DUPLICATES')
+    remove_adjacent_duplicates(data_sources)
 
     print('\nNORMALIZING IMAGES')
     normalize_images(data_sources)
