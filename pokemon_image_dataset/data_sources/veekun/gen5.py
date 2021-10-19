@@ -1,4 +1,4 @@
-from pokemon_image_dataset.data_sources import SpriteSetDataSource, PathDict
+from pokemon_image_dataset.data_sources import SpriteSetConfig as Conf, SpriteSetDataSource, PathDict
 from pokemon_image_dataset.form import DISMISS_FORM, Form, get_form
 
 
@@ -6,7 +6,7 @@ class Gen5(SpriteSetDataSource):
     url = 'https://veekun.com/static/pokedex/downloads/generation-5.tar.gz'
     checksum = 'ee037a3319b2a6143c5c90f679be13a06126c2f5424e46023fe0f53d2631aa62'
     sprite_sets = {
-        'pokemon/main-sprites/black-white': dict(
+        'pokemon/main-sprites/black-white': Conf(
             glob='*.png',
             extra={
                 'female/521.png': '521-female.png',
@@ -15,14 +15,6 @@ class Gen5(SpriteSetDataSource):
             },
         ),
     }
-    # extra_ops = (
-    #     ('black-white/back', None),
-    #     ('black-white/female/521.png', 'black-white/521-female.png'),
-    #     ('black-white/female/592.png', 'black-white/592-female.png'),
-    #     ('black-white/female/593.png', 'black-white/593-female.png'),
-    #     ('black-white/female', None),
-    #     ('black-white/shiny', None),
-    # )
 
     def assign_forms(self):
         return PathDict(**{

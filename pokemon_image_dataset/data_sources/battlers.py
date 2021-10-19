@@ -3,7 +3,7 @@ import shutil
 from py7zr import unpack_7zarchive
 from wand.image import Image
 
-from pokemon_image_dataset.data_sources import SpriteSetDataSource, PathDict
+from pokemon_image_dataset.data_sources import SpriteSetDataSource, SpriteSetConfig, PathDict
 from pokemon_image_dataset.form import DISMISS_FORM, Form, get_form
 from pokemon_image_dataset.utils import NAME_DELIMITER, name, with_stem
 
@@ -12,7 +12,7 @@ class BattlersDataSource(SpriteSetDataSource):
     url = 'https://www.mediafire.com/folder/mi31mvoxx98ij/3D_Battlers'
     checksum = 'a282265f827aaf309f08c1be7ea98726de14bca942823ea85e6d7c77338d1205'
     sprite_sets = {
-        'Front': dict(
+        'Front': SpriteSetConfig(
             dest='3d-battlers-animated',
             glob='*.png',
             extra={
@@ -22,6 +22,7 @@ class BattlersDataSource(SpriteSetDataSource):
                 'Female/668.png': '668-female.png',
                 'Female/678.png': '678-female.png',
             },
+            post_process='extract_frames',
         ),
     }
 
@@ -35,10 +36,6 @@ class BattlersDataSource(SpriteSetDataSource):
             else:
                 raise
 
-    def run(self, force=False):
-        super().run(force)
-        self.animations2frames()
-
     def get(self, force):
         # TODO: Implement automatic download
         if not (self.tmp_dir / '3D Battlers [All].7z').exists():
@@ -49,6 +46,36 @@ class BattlersDataSource(SpriteSetDataSource):
 
     def parse_ndex(self, filename: str) -> int:
         return super().parse_ndex(filename.replace('_', NAME_DELIMITER))
+
+    def extract_frames(self, src: str, conf: SpriteSetConfig):
+        # for filename in sorted(self.get_dest(src, conf).iterdir()):
+        for filename in sorted(self.renamed_filenames):
+            print('extract_frames', filename)
+            img = Image(filename=filename)
+            assert (
+                img.width / img.height).is_integer(), 'invalid/non-integer image ratio'
+            frame_width, frame_height = img.height, img.height
+
+            i = 0
+            first_frame = None
+            # frames = []
+
+            for x in range(0, img.width, frame_width):
+                i = x // frame_width
+                frame = img[x:x+frame_width, 0:frame_height]
+                if x == 0:
+                    first_frame = frame
+                else:
+                    if frame == first_frame:
+                        print('found cycle at frame =', i)
+                        break
+                # frames.append(frame)
+                frame.format = 'png'
+                frame.save(
+                    filename=with_stem(filename, name(filename.stem, str(i))),
+                )
+            # create_gif_from_frames(frames, filename)
+            filename.unlink()
 
     def assign_forms(self):
         return PathDict.with_prefix(
@@ -343,32 +370,3 @@ class BattlersDataSource(SpriteSetDataSource):
                 },
             },
         )
-
-    def animations2frames(self):
-        for filename in sorted(self.renamed_filenames):
-            print('animations2frames', filename)
-            img = Image(filename=filename)
-            assert (
-                img.width / img.height).is_integer(), 'invalid/non-integer image ratio'
-            frame_width, frame_height = img.height, img.height
-
-            i = 0
-            first_frame = None
-            # frames = []
-
-            for x in range(0, img.width, frame_width):
-                i = x // frame_width
-                frame = img[x:x+frame_width, 0:frame_height]
-                if x == 0:
-                    first_frame = frame
-                else:
-                    if frame == first_frame:
-                        print('found cycle at frame =', i)
-                        break
-                # frames.append(frame)
-                frame.format = 'png'
-                frame.save(
-                    filename=with_stem(filename, name(filename.stem, str(i))),
-                )
-            # create_gif_from_frames(frames, filename)
-            filename.unlink()

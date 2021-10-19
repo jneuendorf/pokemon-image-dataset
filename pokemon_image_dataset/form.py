@@ -13,19 +13,12 @@ start happening from generation 5:
 
 from dataclasses import dataclass
 import itertools
-from typing import Any, Dict, Sequence, Union
+from typing import Any, Dict, Union
+
+from pokemon_image_dataset.utils import name, dename
 
 
-NAME_DELIMITER = '-'
 DISMISS_FORM = object()
-
-
-def name(*parts: str) -> str:
-    return NAME_DELIMITER.join(parts)
-
-
-def dename(name: str) -> Sequence[str]:
-    return name.split(NAME_DELIMITER)
 
 
 class Form:

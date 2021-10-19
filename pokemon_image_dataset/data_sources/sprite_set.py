@@ -1,24 +1,32 @@
-# from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import shutil
 from typing import Dict, Optional, TypedDict
 
+from pokemon_image_dataset.utils import SPRITE_SET_FORM_DELIMITER, get_image_frames
 from .archive import RemoteArchiveDataSource
 
 
-class SpriteSetConfig(TypedDict):
+@dataclass
+class SpriteSetConfig:
     glob: str
-    extra: Optional[Dict[str, str]]
-    dest: Optional[str]
+    """Glob pattern for relevant image files."""
+    extra: Dict[str, str] = field(default_factory=dict)
+    dest: Optional[str] = None
+    """Rename sprite set folder."""
+    post_process: Optional[str] = None
+
+    def get_dest(self, default: str = None) -> str:
+        return self.dest if self.dest is not None else default
 
 
 class SpriteSetDataSource(RemoteArchiveDataSource):
-    sprite_sets: Dict[str, SpriteSetConfig] = {
-        # 'pokemon/main-sprites/red-blue': {
-        #     'dest': None,  # rename
-        #     'glob': '*.png',
-        # },
-    }
+    sprite_sets: Dict[str, SpriteSetConfig] = {}
+    """Keys are folders in the (unpacked) data source."""
+
+    def run(self, force=False):
+        super().run(force)
+        self.animations2frames()
 
     def arrange(self):
         """Moves sprite set folders into `self.tmp_dir` and
@@ -27,14 +35,13 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
 
         for src, conf in self.sprite_sets.items():
             src = self.root / src
-            pattern = conf['glob']
-            extra = conf.get('extra', {})
-            dest = self.tmp_dir / conf.get('dest', src.name)
+            pattern = conf.glob
+            extra = conf.extra
+            dest = self.get_dest(conf, src.name)
             if dest.exists():
                 print('deleting existing', dest)
                 shutil.rmtree(dest)
             dest.mkdir(parents=True, exist_ok=True)
-            # shutil.copytree(src, dest)
             for file in src.glob(pattern):
                 shutil.move(file, dest / file.name)
             for extra_src, extra_dest in extra.items():
@@ -42,9 +49,34 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
 
         shutil.rmtree(self.root)
 
-    def get_dest(self, src: str, conf: SpriteSetConfig) -> Path:
-        return self.tmp_dir / conf.get('dest', Path(src).name)
+    def get_dest(self, conf: SpriteSetConfig, default: str) -> Path:
+        return self.tmp_dir / (
+            conf.dest
+            if conf.dest
+            else default
+        )
 
     def get_files(self):
         for src, conf in self.sprite_sets.items():
-            yield from self.get_dest(src, conf).iterdir()
+            yield from self.get_dest(conf, Path(src).name).iterdir()
+
+    def animations2frames(self):
+        for src, conf in self.sprite_sets.items():
+            if conf.post_process is not None:
+                method = getattr(self, conf.post_process)
+                method(src, conf)
+
+    def split_gif_frames(self, src: str, conf: SpriteSetConfig, ignore_single_color=True):
+        for gif in self.get_dest(conf, Path(src).name).iterdir():
+            for i, frame in enumerate(get_image_frames(gif)):
+                if ignore_single_color and frame.colors == 1:
+                    print(f'excluding single color frame {i} from {gif}')
+                    continue
+
+                frame.save(filename=(
+                    gif
+                    .with_stem(f'{gif.stem}{SPRITE_SET_FORM_DELIMITER}{i}')
+                    .with_suffix('.png')
+                ))
+            gif.unlink()
+

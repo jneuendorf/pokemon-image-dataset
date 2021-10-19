@@ -1,4 +1,4 @@
-from pokemon_image_dataset.data_sources import SpriteSetDataSource, PathDict
+from pokemon_image_dataset.data_sources import SpriteSetConfig as Conf, SpriteSetDataSource, PathDict
 from pokemon_image_dataset.form import DISMISS_FORM, Form, get_form
 
 
@@ -6,7 +6,7 @@ class Icons(SpriteSetDataSource):
     url = 'https://veekun.com/static/pokedex/downloads/pokemon-icons.tar.gz'
     checksum = 'f9850ce82d8e6e69c163112c47553458fd27805034217a5331a1ae12b2a1c8ac'
     sprite_sets = {
-        'pokemon/icons': dict(
+        'pokemon/icons': Conf(
             glob='*.png',
             extra={
                 'female/521.png': '521-female.png',

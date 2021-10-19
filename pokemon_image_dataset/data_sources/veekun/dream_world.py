@@ -1,6 +1,6 @@
 from cairosvg import svg2png
 
-from pokemon_image_dataset.data_sources import SpriteSetDataSource, PathDict
+from pokemon_image_dataset.data_sources import SpriteSetConfig as Conf, SpriteSetDataSource, PathDict
 from pokemon_image_dataset.form import Form, get_form
 
 
@@ -8,7 +8,7 @@ class DreamWorld(SpriteSetDataSource):
     url = 'https://veekun.com/static/pokedex/downloads/pokemon-dream-world.tar.gz'
     checksum = 'eaaf06ea99e71e34d8710f5cfd4923b8cd4d62f44124930afd02bc17046b6057'
     sprite_sets = {
-        'pokemon/dream-world': dict(
+        'pokemon/dream-world': Conf(
             glob='*.svg',
             extra={
                 # 521-female not available
@@ -17,12 +17,6 @@ class DreamWorld(SpriteSetDataSource):
             },
         ),
     }
-    # extra_ops = (
-    #     # 521-female not available
-    #     ('dream-world/female/592.svg', 'dream-world/592-female.svg'),
-    #     ('dream-world/female/593.svg', 'dream-world/593-female.svg'),
-    #     ('dream-world/female/', None),
-    # )
 
     def run(self, force=False):
         super().run(force)

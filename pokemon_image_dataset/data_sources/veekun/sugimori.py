@@ -1,4 +1,4 @@
-from pokemon_image_dataset.data_sources import SpriteSetDataSource, PathDict
+from pokemon_image_dataset.data_sources import SpriteSetConfig as Conf, SpriteSetDataSource, PathDict
 from pokemon_image_dataset.form import DISMISS_FORM, Form, get_form
 
 
@@ -6,7 +6,7 @@ class Sugimori(SpriteSetDataSource):
     url = 'https://veekun.com/static/pokedex/downloads/pokemon-sugimori.tar.gz'
     checksum = '9dcb5ab803725db99ec235df72da9cc20e96ac843d88394cff95a6b0bb06da16'
     sprite_sets = {
-        'pokemon/sugimori': dict(
+        'pokemon/sugimori': Conf(
             glob='*.png',
             extra={
                 'female/521.png': '521-female.png',

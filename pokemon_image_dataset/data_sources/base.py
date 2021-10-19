@@ -5,7 +5,7 @@ from typing import Iterable
 
 from pokemon_image_dataset.form import POKEMON_FORMS, DISMISS_FORM
 from pokemon_image_dataset.utils import (
-    dename,
+    parse_ndex,
     readlink,
     verify_sha256_checksum,
     with_stem,
@@ -112,8 +112,7 @@ class DataSource(ABC):
         ...
 
     def parse_ndex(self, filename: str) -> int:
-        ndex_str = dename(filename)[0]
-        return int(ndex_str)
+        return parse_ndex(filename)
 
     @property
     def renamed_filenames(self):

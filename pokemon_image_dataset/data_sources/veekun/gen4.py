@@ -1,4 +1,4 @@
-from pokemon_image_dataset.data_sources import SpriteSetDataSource, PathDict
+from pokemon_image_dataset.data_sources import SpriteSetConfig as Conf, SpriteSetDataSource, PathDict
 from pokemon_image_dataset.form import DISMISS_FORM, Form, get_form
 
 
@@ -6,36 +6,22 @@ class Gen4(SpriteSetDataSource):
     url = 'https://veekun.com/static/pokedex/downloads/generation-4.tar.gz'
     checksum = 'b1b69463aac872b54adf56f1159e8e6d2dfcbbecb7d71c7ebf832fe44140da41'
     sprite_sets = {
-        'pokemon/main-sprites/diamond-pearl': dict(glob='*.png'),
-        'pokemon/main-sprites/diamond-pearl/frame2': dict(
+        'pokemon/main-sprites/diamond-pearl': Conf(glob='*.png'),
+        'pokemon/main-sprites/diamond-pearl/frame2': Conf(
             dest='diamond-pearl-frame2',
             glob='*.png',
         ),
-        'pokemon/main-sprites/platinum': dict(glob='*.png'),
-        'pokemon/main-sprites/platinum/frame2': dict(
+        'pokemon/main-sprites/platinum': Conf(glob='*.png'),
+        'pokemon/main-sprites/platinum/frame2': Conf(
             dest='platinum-frame2',
             glob='*.png',
         ),
-        'pokemon/main-sprites/heartgold-soulsilver': dict(glob='*.png'),
-        'pokemon/main-sprites/heartgold-soulsilver/frame2': dict(
+        'pokemon/main-sprites/heartgold-soulsilver': Conf(glob='*.png'),
+        'pokemon/main-sprites/heartgold-soulsilver/frame2': Conf(
             dest='heartgold-soulsilver-frame2',
             glob='*.png',
         ),
     }
-    # extra_ops = (
-    #     ('diamond-pearl/back', None),
-    #     ('diamond-pearl/female', None),
-    #     ('diamond-pearl/frame2', None),
-    #     ('diamond-pearl/shiny', None),
-    #     ('platinum/back', None),
-    #     ('platinum/female', None),
-    #     ('platinum/frame2', None),
-    #     ('platinum/shiny', None),
-    #     ('heartgold-soulsilver/back', None),
-    #     ('heartgold-soulsilver/female', None),
-    #     ('heartgold-soulsilver/frame2', None),
-    #     ('heartgold-soulsilver/shiny', None),
-    # )
 
     def assign_forms(self):
         return PathDict(**{
@@ -50,7 +36,7 @@ class Gen4(SpriteSetDataSource):
             'diamond-pearl/492': get_form(492, 'land'),
             'diamond-pearl/493-normal': get_form(493, Form.NORMAL),
             'diamond-pearl/493-unknown': DISMISS_FORM,  # invalid form
-            'diamond-pearl-frame2/201': DISMISS_FORM,  # empty image
+            'diamond-pearl-frame2/201*': DISMISS_FORM,  # empty image
             'diamond-pearl-frame2/386-normal': get_form(386, Form.NORMAL),
             'diamond-pearl-frame2/412': get_form(412, 'plant'),
             'diamond-pearl-frame2/413': get_form(413, 'plant'),
