@@ -12,16 +12,17 @@ from pokemon_image_dataset.utils import (
 )
 
 
-LATEST_VERSION = 'v0.0.0_1'
+LATEST_VERSION = 'v0.0.1'
 NEXT_VERSION = 'next'
 CHECKSUM_BY_VERSION = {
     'v0.0.0_1': '9e0cd8a43d42bdcfefff941507756e4e8dc4d3add6595cbed854f0d3aa892044',
+    'v0.0.1': '39079ead536c5ba911f002f863726b4e5f09ad203f4111a6b87f1071d0f6a966',
 }
 
 
 class PokemonImageDataset(ImageFolder):
 
-    MAIN_URL = (
+    NEXT_VERSION_URL = (
         'https://github.com/jneuendorf/pokemon-image-dataset-files/'
         'archive/refs/heads/main.zip'
     )
@@ -81,7 +82,7 @@ class PokemonImageDataset(ImageFolder):
     @property
     def url(self) -> str:
         if self.version == NEXT_VERSION:
-            return self.MAIN_URL
+            return self.NEXT_VERSION_URL
         else:
             return self.VERSION_URL.format(version=self.version)
 
