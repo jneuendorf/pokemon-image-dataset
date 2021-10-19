@@ -1,4 +1,6 @@
-from pokemon_image_dataset.data_sources import SpriteSetConfig as Conf, SpriteSetDataSource, PathDict
+from pokemon_image_dataset.data_sources import PathDict
+from pokemon_image_dataset.data_sources import SpriteSetConfig as Conf
+from pokemon_image_dataset.data_sources import SpriteSetDataSource
 from pokemon_image_dataset.form import DISMISS_FORM, Form, get_form
 
 

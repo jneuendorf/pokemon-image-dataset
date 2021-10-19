@@ -15,7 +15,7 @@ from dataclasses import dataclass
 import itertools
 from typing import Any, Dict, Union
 
-from pokemon_image_dataset.utils import name, dename
+from pokemon_image_dataset.utils import name
 
 
 DISMISS_FORM = object()

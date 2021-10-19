@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 import shutil
-from typing import Dict, Optional, TypedDict
+from typing import Dict, Optional
 
 from pokemon_image_dataset.utils import SPRITE_SET_FORM_DELIMITER, get_image_frames
 from .archive import RemoteArchiveDataSource
@@ -79,4 +79,3 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
                     .with_suffix('.png')
                 ))
             gif.unlink()
-
