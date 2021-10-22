@@ -18,8 +18,6 @@ class DataSource(ABC):
     extra_ops = ()
     tmp_dir: Path = None
 
-    _renamed_files = set()
-
     def __init__(self, *, tmp_dir: Path):
         self.tmp_dir = tmp_dir
 
@@ -29,8 +27,7 @@ class DataSource(ABC):
         self.verify_checksum(data_path)
         self.process(data_path)
         self.arrange()
-        self.do_extra_ops()
-        self._renamed_files = self.rename_forms()
+        self.rename_forms()
 
     @abstractmethod
     def get(self, force: bool):
@@ -49,23 +46,7 @@ class DataSource(ABC):
     def arrange(self):
         ...
 
-    def do_extra_ops(self):
-        for src, dst in self.extra_ops:
-            print('extra_op', src, dst)
-            if dst is None:
-                try:
-                    if (self.tmp_dir / src).is_dir():
-                        shutil.rmtree(self.tmp_dir / src)
-                    else:
-                        (self.tmp_dir / src).unlink()
-                except FileNotFoundError:
-                    print('tried to delete', self.tmp_dir / src)
-            else:
-                shutil.move(str(self.tmp_dir / src), str(self.tmp_dir / dst))
-
     def rename_forms(self) -> None:
-        files = set()
-
         assigned_forms = self.assign_forms()
         # NOTE: Sorting enhances value of printed operations
         #  but is essential for having a deterministic order so that
@@ -94,15 +75,11 @@ class DataSource(ABC):
                     filename.unlink()
                 else:
 
-                    # Avoid unncessary renames
+                    # Avoid unnecessary renames
                     if form.complete_name != stem:
                         rename_to = with_stem(filename, form.complete_name)
                         print('rename:', filename, rename_to)
                         filename.rename(rename_to)
-                        files.add(rename_to)
-                    else:
-                        files.add(filename)
-        return files
 
     def assign_forms(self) -> PathDict:
         return PathDict()
@@ -113,7 +90,3 @@ class DataSource(ABC):
 
     def parse_ndex(self, filename: str) -> int:
         return parse_ndex(filename)
-
-    @property
-    def renamed_filenames(self):
-        return self._renamed_files.copy()

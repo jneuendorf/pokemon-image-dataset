@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Collection, Dict, List, Optional, Tuple, Union
 
 from pokemon_image_dataset.form import PokemonForm
-from pokemon_image_dataset.utils import SPRITE_SET_FORM_DELIMITER, get_image_frames, whiten_areas
+from pokemon_image_dataset.utils import NAME_DELIMITER, get_image_frames, whiten_areas
 from .archive import RemoteArchiveDataSource
 
 PostProcessorSpec = Union[str, Tuple[str, dict]]
@@ -94,7 +94,7 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
 
                 frame.save(filename=(
                     gif
-                    .with_stem(f'{gif.stem}{SPRITE_SET_FORM_DELIMITER}{i}')
+                    .with_stem(f'{gif.stem}{NAME_DELIMITER}{i}')
                     .with_suffix('.png')
                 ))
             gif.unlink()

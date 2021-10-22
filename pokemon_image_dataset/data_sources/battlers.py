@@ -5,7 +5,7 @@ from wand.image import Image
 
 from pokemon_image_dataset.data_sources import SpriteSetDataSource, SpriteSetConfig, PathDict
 from pokemon_image_dataset.form import DISMISS_FORM, Form, get_form
-from pokemon_image_dataset.utils import NAME_DELIMITER, name, with_stem
+from pokemon_image_dataset.utils import FORM_NAME_DELIMITER, name, with_stem
 
 
 class BattlersDataSource(SpriteSetDataSource):
@@ -45,19 +45,15 @@ class BattlersDataSource(SpriteSetDataSource):
         return self.tmp_dir / '3D Battlers [All].7z'
 
     def parse_ndex(self, filename: str) -> int:
-        return super().parse_ndex(filename.replace('_', NAME_DELIMITER))
+        return super().parse_ndex(filename.replace('_', FORM_NAME_DELIMITER))
 
     def extract_frames(self, src: str, conf: SpriteSetConfig):
-        # TODO: remove renamed_filenames?
-        # for filename in sorted(self.get_dest(src, conf).iterdir()):
-        for filename in sorted(self.renamed_filenames):
+        for filename in self.get_sprite_set_files(src):
             print('extract_frames', filename)
             img = Image(filename=filename)
             assert (
                 img.width / img.height).is_integer(), 'invalid/non-integer image ratio'
             frame_width, frame_height = img.height, img.height
-
-            first_frame = None
 
             for x in range(0, img.width, frame_width):
                 i = x // frame_width

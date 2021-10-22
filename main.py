@@ -13,8 +13,8 @@ from wand.image import Image
 
 from pokemon_image_dataset.data_sources import (BattlersDataSource, DataSource, SpriteSetDataSource,
                                                 veekun)
-from pokemon_image_dataset.utils import (NAME_DELIMITER,
-                                         SPRITE_SET_FORM_DELIMITER, dename, extent_gravity_center,
+from pokemon_image_dataset.utils import (FORM_NAME_DELIMITER,
+                                         NAME_DELIMITER, dename, extent_gravity_center,
                                          get_bbox, get_scaling_factor, name)
 
 BASE_DIR = Path(__file__).parent
@@ -38,7 +38,7 @@ def remove_adjacent_duplicates(data_sources: List[SpriteSetDataSource]) -> None:
 
     def filename_key(filename: Path) -> tuple:
         ndex, *rest = re.split(
-            f'{NAME_DELIMITER}|{SPRITE_SET_FORM_DELIMITER}',
+            f'{FORM_NAME_DELIMITER}|{NAME_DELIMITER}',
             filename.stem,
         )
         if rest:
@@ -112,7 +112,7 @@ def copy_images_to_data_repo(data_sources: List[DataSource]) -> None:
             dest_dir = DATA_REPO_DIR / ndex
             dest_dir.mkdir(parents=True, exist_ok=True)
             if form:
-                new_stem = sprite_set + SPRITE_SET_FORM_DELIMITER + name(*form)
+                new_stem = sprite_set + NAME_DELIMITER + name(*form)
             else:
                 new_stem = sprite_set
             dest_file_path = dest_dir / filename.with_stem(new_stem).name

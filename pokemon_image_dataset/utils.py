@@ -15,20 +15,20 @@ from wand.image import Image
 PathLike = Union[str, Path]
 
 
-SPRITE_SET_FORM_DELIMITER = '--'  # TODO: NAME_DEMILITER
-NAME_DELIMITER = '-'  # TODO: FORM_DELIMITER
+NAME_DELIMITER = '--'
+FORM_NAME_DELIMITER = '-'
 
 
 ###############################################################################
 # FILENAMES
 def name(*parts: str) -> str:
-    return NAME_DELIMITER.join(parts)
+    return FORM_NAME_DELIMITER.join(parts)
 
 
 def dename(name: PathLike) -> Sequence[str]:
     if isinstance(name, Path):
         name = name.stem
-    return name.split(NAME_DELIMITER)
+    return name.split(FORM_NAME_DELIMITER)
 
 
 def parse_ndex(filename: str) -> int:
