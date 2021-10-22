@@ -1,5 +1,5 @@
 .PHONY: main
-main: activate
+main:
 	python main.py
 
 init_macos:

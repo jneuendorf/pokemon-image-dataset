@@ -22,7 +22,7 @@ class BattlersDataSource(SpriteSetDataSource):
                 'Female/668.png': '668-female.png',
                 'Female/678.png': '678-female.png',
             },
-            post_process='extract_frames',
+            post_process=['extract_frames'],
         ),
     }
 
@@ -48,6 +48,7 @@ class BattlersDataSource(SpriteSetDataSource):
         return super().parse_ndex(filename.replace('_', NAME_DELIMITER))
 
     def extract_frames(self, src: str, conf: SpriteSetConfig):
+        # TODO: remove renamed_filenames?
         # for filename in sorted(self.get_dest(src, conf).iterdir()):
         for filename in sorted(self.renamed_filenames):
             print('extract_frames', filename)
@@ -56,25 +57,15 @@ class BattlersDataSource(SpriteSetDataSource):
                 img.width / img.height).is_integer(), 'invalid/non-integer image ratio'
             frame_width, frame_height = img.height, img.height
 
-            i = 0
             first_frame = None
-            # frames = []
 
             for x in range(0, img.width, frame_width):
                 i = x // frame_width
                 frame = img[x:x+frame_width, 0:frame_height]
-                if x == 0:
-                    first_frame = frame
-                else:
-                    if frame == first_frame:
-                        print('found cycle at frame =', i)
-                        break
-                # frames.append(frame)
                 frame.format = 'png'
                 frame.save(
                     filename=with_stem(filename, name(filename.stem, str(i))),
                 )
-            # create_gif_from_frames(frames, filename)
             filename.unlink()
 
     def assign_forms(self):

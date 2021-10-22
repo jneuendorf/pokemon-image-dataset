@@ -14,7 +14,7 @@ class Gen2(SpriteSetDataSource):
         'pokemon/main-sprites/crystal/animated': Conf(
             dest='crystal-animated',
             glob='*.gif',
-            post_process='split_gif_frames',
+            post_process=['split_gif_frames'],
         ),
     }
 

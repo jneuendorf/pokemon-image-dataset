@@ -15,6 +15,64 @@ class Gen5(SpriteSetDataSource):
                 'female/592.png': '592-female.png',
                 'female/593.png': '593-female.png',
             },
+            post_process=[
+                ('whiten_areas', {
+                    'forms': [
+                        get_form(201, 'd'),
+                        get_form(201, 'e'),
+                        get_form(201, 'exclamation'),
+                        get_form(201, 'h'),
+                        get_form(201, 'i'),
+                        get_form(201, 'j'),
+                        get_form(201, 'k'),
+                        get_form(201, 'l'),
+                        get_form(201, 'm'),
+                        get_form(201, 'n'),
+                        get_form(201, 'p'),
+                        get_form(201, 'q'),
+                        get_form(201, 'question'),
+                        get_form(201, 'r'),
+                        get_form(201, 's'),
+                        get_form(201, 't'),
+                        get_form(201, 'w'),
+                        get_form(201, 'x'),
+                        get_form(201, 'y'),
+                        get_form(201, 'z'),
+                        (
+                            get_form(201, 'a'),
+                            [(0, 0), (48, 55)],
+                        ),
+                        (
+                            get_form(201, 'b'),
+                            [(0, 0), (47, 56)],
+                        ),
+                        (
+                            get_form(201, 'c'),
+                            [(0, 0), (47, 36), (38, 45), (39, 41), (43, 54)],
+                        ),
+                        (
+                            get_form(201, 'f'),
+                            [(0, 0), (55, 44)],
+                        ),
+                        (
+                            get_form(201, 'g'),
+                            [(0, 0), (48, 35)],
+                        ),
+                        (
+                            get_form(201, 'o'),
+                            [(0, 0), (47, 38)],
+                        ),
+                        (
+                            get_form(201, 'u'),
+                            [(0, 0), (43, 54), (51, 55)],
+                        ),
+                        (
+                            get_form(201, 'v'),
+                            [(0, 0), (46, 40)],
+                        ),
+                    ],
+                }),
+            ],
         ),
     }
 

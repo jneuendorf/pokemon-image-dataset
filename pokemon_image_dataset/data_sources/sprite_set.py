@@ -1,10 +1,13 @@
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-import shutil
-from typing import Dict, Optional
+from typing import Collection, Dict, List, Optional, Tuple, Union
 
-from pokemon_image_dataset.utils import SPRITE_SET_FORM_DELIMITER, get_image_frames
+from pokemon_image_dataset.form import PokemonForm
+from pokemon_image_dataset.utils import SPRITE_SET_FORM_DELIMITER, get_image_frames, whiten_areas
 from .archive import RemoteArchiveDataSource
+
+PostProcessorSpec = Union[str, Tuple[str, dict]]
 
 
 @dataclass
@@ -14,7 +17,12 @@ class SpriteSetConfig:
     extra: Dict[str, str] = field(default_factory=dict)
     dest: Optional[str] = None
     """Rename sprite set folder."""
-    post_process: Optional[str] = None
+    post_process: List[PostProcessorSpec] = field(default_factory=list)
+    """Method name or tuples of name and kwargs.
+    Method that get called for a sprite set with
+        (src: str, conf: SpriteSetConfig, **kwargs)
+    in the specified order.
+    """
 
     def get_dest(self, default: str = None) -> str:
         return self.dest if self.dest is not None else default
@@ -26,7 +34,7 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
 
     def run(self, force=False):
         super().run(force)
-        self.animations2frames()
+        self.post_process()
 
     def arrange(self):
         """Moves sprite set folders into `self.tmp_dir` and
@@ -57,19 +65,30 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
         )
 
     def get_files(self):
-        for src, conf in self.sprite_sets.items():
-            yield from self.get_dest(conf, Path(src).name).iterdir()
+        for src in self.sprite_sets:
+            yield from self.get_sprite_set_files(src)
 
-    def animations2frames(self):
-        for src, conf in self.sprite_sets.items():
-            if conf.post_process is not None:
-                method = getattr(self, conf.post_process)
-                method(src, conf)
+    def get_sprite_set_files(self, src: str):
+        yield from self.get_dest(self.sprite_sets[src], Path(src).name).iterdir()
 
-    def split_gif_frames(self, src: str, conf: SpriteSetConfig, ignore_single_color=True):
-        for gif in self.get_dest(conf, Path(src).name).iterdir():
+    def post_process(self):
+        for src, conf in self.sprite_sets.items():
+            for method_spec in conf.post_process:
+                method_name: str
+                kwargs = {}
+                if isinstance(method_spec, tuple):
+                    method_name, kwargs = method_spec
+                else:
+                    method_name = method_spec
+                method = getattr(self, method_name)
+                method(src, conf, **kwargs)
+
+    # POST PROCESSORS
+    def split_gif_frames(self, src: str, conf: SpriteSetConfig):
+        for gif in self.get_sprite_set_files(src):
             for i, frame in enumerate(get_image_frames(gif)):
-                if ignore_single_color and frame.colors == 1:
+                # Ignore single color frames
+                if frame.colors == 1:
                     print(f'excluding single color frame {i} from {gif}')
                     continue
 
@@ -79,3 +98,19 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
                     .with_suffix('.png')
                 ))
             gif.unlink()
+
+    def whiten_areas(
+        self,
+        src: str,
+        conf: SpriteSetConfig,
+        forms: Collection[Union[PokemonForm, Tuple[PokemonForm, List[Tuple[int, int]]]]] = (),
+    ) -> None:
+        forms_an_coords = [
+            (form, [(0, 0)]) if isinstance(form, PokemonForm) else form
+            for form in forms
+        ]
+        dest = self.get_dest(self.sprite_sets[src], Path(src).name)
+        for form, coords in forms_an_coords:
+            filename = dest / f'{form.complete_name}.png'
+            print('whitening area of', filename, 'at', coords)
+            whiten_areas(filename, coords)

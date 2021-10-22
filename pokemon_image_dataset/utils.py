@@ -2,15 +2,15 @@ import hashlib
 import os
 import shutil
 from pathlib import Path
-from typing import Union, Sequence, Tuple
+from typing import Union, Sequence, Tuple, List
 
 import numpy as np
 import requests
 from skimage.color import rgb2gray
 from skimage.measure import label, regionprops
 from wand.color import Color
+from wand.drawing import Drawing
 from wand.image import Image
-
 
 PathLike = Union[str, Path]
 
@@ -180,7 +180,7 @@ def get_image_frames(filename: Path) -> Tuple[Image]:
         )
 
 
-# def save_image_framges(filename: Path, format: str = '{parent}/{stem}-{frame}{suffix}') -> None:
+# def save_image_frames(filename: Path, format: str = '{parent}/{stem}-{frame}{suffix}') -> None:
 #     for i, frame in enumerate(get_image_frames(filename)):
 #         frame.save(filename=format.format(
 #             parent=filename.parent.name,
@@ -188,3 +188,17 @@ def get_image_frames(filename: Path) -> Tuple[Image]:
 #             frame=i,
 #             suffix=filename.suffix,
 #         ))
+
+
+def whiten_areas(filename: Path, coords: List[Tuple[int, int]], save_to: Path = None) -> None:
+    if save_to is None:
+        save_to = filename
+
+    white = Color('white')
+    with Image(filename=filename) as img:
+        for x, y in coords:
+            with Drawing() as draw:
+                draw.fill_color = white
+                draw.color(x, y, 'floodfill')
+                draw.draw(img)
+                img.save(filename=save_to)

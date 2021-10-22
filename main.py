@@ -1,10 +1,8 @@
 import filecmp
 import re
 import shutil
-from itertools import combinations
 from pathlib import Path
-from pprint import pprint
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 from skimage.color import gray2rgb, rgba2rgb
@@ -13,13 +11,11 @@ from skimage.transform import rescale
 from tqdm import tqdm
 from wand.image import Image
 
-from pokemon_image_dataset.data_sources import (BattlersDataSource, DataSource,
+from pokemon_image_dataset.data_sources import (BattlersDataSource, DataSource, SpriteSetDataSource,
                                                 veekun)
 from pokemon_image_dataset.utils import (NAME_DELIMITER,
-                                         SPRITE_SET_FORM_DELIMITER, bbox_size,
-                                         dename, extent_gravity_center,
+                                         SPRITE_SET_FORM_DELIMITER, dename, extent_gravity_center,
                                          get_bbox, get_scaling_factor, name)
-
 
 BASE_DIR = Path(__file__).parent
 TMP_DIR = BASE_DIR / 'tmp'
@@ -31,13 +27,13 @@ PADDING = 1
 FINAL_SIZE = (96, 96)
 
 
-def run_data_sources(data_sources: Tuple[DataSource]) -> None:
+def run_data_sources(data_sources: List[DataSource]) -> None:
     for data_source in data_sources:
         print(f'processing data source {data_source.__class__.__name__}')
         data_source.run(force=False)
 
 
-def remove_adjacent_duplicates(data_sources: Tuple[DataSource]) -> None:
+def remove_adjacent_duplicates(data_sources: List[SpriteSetDataSource]) -> None:
     """Finds and removes duplicates within each data source, not across data sources."""
 
     def filename_key(filename: Path) -> tuple:
@@ -55,7 +51,7 @@ def remove_adjacent_duplicates(data_sources: Tuple[DataSource]) -> None:
         else:
             frame = None
             form = ''
-        return (int(ndex), form, frame)
+        return int(ndex), form, frame
 
     for data_source in data_sources:
         print(f'removing duplicates for {data_source.__class__.__name__}')
@@ -75,9 +71,9 @@ def remove_adjacent_duplicates(data_sources: Tuple[DataSource]) -> None:
                 print('removed duplicate', file)
 
 
-def normalize_images(data_sources: Tuple[DataSource]) -> None:
+def normalize_image_sizes(data_sources: List[DataSource]) -> None:
     for data_source in data_sources:
-        print(f'normalizing images for {data_source.__class__.__name__}')
+        print(f'normalizing image sizes for {data_source.__class__.__name__}')
         for filename in tqdm(sorted(data_source.get_files())):
             with Image(filename=filename) as img:
                 bbox = get_bbox(img)
@@ -89,13 +85,6 @@ def normalize_images(data_sources: Tuple[DataSource]) -> None:
                 img = gray2rgb(img)
 
             assert img.shape[-1] == 3, f'image must have 3 channels but got shape {img.shape}'
-
-            # For some reason #201 (unown) has a different image format for some images
-            # which leads to black background instead of white.
-            # Since no other pixels are strictly white, we manually replace all black with white pixels.
-            if filename.parent.name == '201' and np.all(img[0, 0] == [0, 0, 0]):
-                black = np.all(img == [0, 0, 0], axis=-1)
-                img[black] = [255, 255, 255]
 
             min_row, min_col, max_row, max_col = bbox
             cropped = img[min_row:max_row, min_col:max_col]
@@ -114,7 +103,7 @@ def normalize_images(data_sources: Tuple[DataSource]) -> None:
             res_img.save(filename=filename)
 
 
-def copy_images_to_data_repo(data_sources: Tuple[DataSource]) -> None:
+def copy_images_to_data_repo(data_sources: List[DataSource]) -> None:
     for data_source in data_sources:
         print(f'copying images of {data_source.__class__.__name__}')
         for filename in tqdm(sorted(data_source.get_files())):
@@ -133,7 +122,7 @@ def copy_images_to_data_repo(data_sources: Tuple[DataSource]) -> None:
 
 ###############################################################################
 if __name__ == '__main__':
-    data_sources: Tuple[DataSource] = tuple(
+    data_sources: List[SpriteSetDataSource] = [
         DataSource(tmp_dir=TMP_DIR)
         for DataSource in (
             veekun.Gen1,
@@ -146,7 +135,7 @@ if __name__ == '__main__':
             veekun.DreamWorld,
             BattlersDataSource,
         )
-    )
+    ]
     print('\nRUNNING DATA SOURCES')
     run_data_sources(data_sources)
 
@@ -154,7 +143,7 @@ if __name__ == '__main__':
     remove_adjacent_duplicates(data_sources)
 
     print('\nNORMALIZING IMAGES')
-    normalize_images(data_sources)
+    normalize_image_sizes(data_sources)
 
     print('\nMOVING IMAGES TO DATA REPO')
     copy_images_to_data_repo(data_sources)

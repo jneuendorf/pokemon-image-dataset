@@ -8,12 +8,34 @@ class Gen3(SpriteSetDataSource):
     url = 'https://veekun.com/static/pokedex/downloads/generation-3.tar.gz'
     checksum = '15b733baf9ef91fbde3ae957edb4d2ba75615601a515b41590ab87043370319c'
     sprite_sets = {
-        'pokemon/main-sprites/ruby-sapphire': Conf(glob='*.png'),
-        'pokemon/main-sprites/emerald': Conf(glob='*.png'),
+        'pokemon/main-sprites/ruby-sapphire': Conf(
+            glob='*.png',
+            post_process=[
+                # For some reason #201 (unown) has a different image format for some images
+                # which leads to black background instead of white.
+                ('whiten_areas', {
+                    'forms': [
+                        get_form(201, 'exclamation'),
+                        get_form(201, 'question'),
+                    ],
+                }),
+            ],
+        ),
+        'pokemon/main-sprites/emerald': Conf(
+            glob='*.png',
+            post_process=[
+                ('whiten_areas', {
+                    'forms': [
+                        get_form(201, 'exclamation'),
+                        get_form(201, 'question'),
+                    ],
+                }),
+            ],
+        ),
         'pokemon/main-sprites/emerald/animated': Conf(
             dest='emerald-animated',
             glob='*.gif',
-            post_process='split_gif_frames',
+            post_process=['split_gif_frames'],
         ),
         'pokemon/main-sprites/emerald/frame2': Conf(dest='emerald-frame2', glob='*.png'),
         'pokemon/main-sprites/firered-leafgreen': Conf(glob='*.png'),
