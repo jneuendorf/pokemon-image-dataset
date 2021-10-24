@@ -1,10 +1,11 @@
 import filecmp
+import json
 import re
 import shutil
 from pathlib import Path
-from typing import Tuple, List
+from pprint import pprint
+from typing import List
 
-import numpy as np
 from skimage.color import gray2rgb, rgba2rgb
 from skimage.io import imread
 from skimage.transform import rescale
@@ -20,6 +21,7 @@ from pokemon_image_dataset.utils import (FORM_NAME_DELIMITER,
 BASE_DIR = Path(__file__).parent
 TMP_DIR = BASE_DIR / 'tmp'
 DATA_REPO_DIR = BASE_DIR / 'pokemon-image-dataset-files'
+STATS_FILE = BASE_DIR / 'stats.json'
 
 PADDING = 1
 # This values are arbitrary such that 48x48 can be upscaled well and only 128x128 needs to be downscaled.
@@ -112,12 +114,76 @@ def copy_images_to_data_repo(data_sources: List[DataSource]) -> None:
             dest_dir = DATA_REPO_DIR / ndex
             dest_dir.mkdir(parents=True, exist_ok=True)
             if form:
+                # TODO: fix dashes, i.e. 1/emerald-animated---28.png
                 new_stem = sprite_set + NAME_DELIMITER + name(*form)
             else:
                 new_stem = sprite_set
             dest_file_path = dest_dir / filename.with_stem(new_stem).name
             # print(filename, '->', dest_file_path)
             shutil.copyfile(filename, dest_file_path)
+
+
+def generate_stats(data_sources: List[SpriteSetDataSource]) -> None:
+    """Gets some statistic data from the `DATA_REPO_DIR`.
+    Only the structure of this directory is used, not the data sources data or meta data.
+    This way, errors/inconsistencies should become obvious more easily.
+    """
+
+    # battlers = data_sources[-1]
+    # dest = battlers.get_dest(battlers.sprite_sets['Front'], '')
+    # data = (
+    #     set(DATA_REPO_DIR.glob(f'*/{dest.name}{NAME_DELIMITER}*.png'))
+    #     | set(DATA_REPO_DIR.glob(f'*/{dest.name}.png'))
+    # )
+    # data = {name(f.parent.name, f.name.replace(f'3d-battlers-animated{NAME_DELIMITER}', '')) for f in data}
+    # tmp = {f.name for f in battlers.get_files()}
+    # print('data', len(data))
+    # print('tmp', len(set(battlers.get_files())))
+    # pprint(data - tmp)
+    # return
+
+    stats = {
+        'images': sum(1 for _ in DATA_REPO_DIR.glob('*/*.png')),
+        # TODO: seems to be wrong for battlers
+        'images_per_sprite_set': {
+            data_source.get_dest(conf, Path(src).name).name: (
+                sum(1 for _ in DATA_REPO_DIR.glob(
+                    f'*/{data_source.get_dest(conf, Path(src).name).name}{NAME_DELIMITER}*.png'
+                ))
+                + sum(1 for _ in DATA_REPO_DIR.glob(
+                    f'*/{data_source.get_dest(conf, Path(src).name).name}.png'
+                ))
+            )
+            for data_source in data_sources
+            for src, conf in data_source.sprite_sets.items()
+        },
+        'pokemon_per_sprite_set': {
+            data_source.get_dest(conf, Path(src).name).name: (
+                sum(1 for _ in {
+                    filename.parent.name
+                    for filename in DATA_REPO_DIR.glob(
+                        f'*/{data_source.get_dest(conf, Path(src).name).name}{NAME_DELIMITER}*.png'
+                    )
+                })
+                + sum(1 for _ in {
+                    filename.parent.name
+                    for filename in DATA_REPO_DIR.glob(
+                        f'*/{data_source.get_dest(conf, Path(src).name).name}.png'
+                    )
+                })
+            )
+            for data_source in data_sources
+            for src, conf in data_source.sprite_sets.items()
+        },
+        'images_per_pokemon': {
+            int(ndex.name): sum(1 for _ in ndex.glob('*.png'))
+            for ndex in DATA_REPO_DIR.glob('*')
+            if ndex.is_dir()  # ignore e.g. .DS_Store
+        },
+    }
+    with open(STATS_FILE, 'w') as fp:
+        json.dump(stats, fp)
+    pprint(stats)
 
 
 ###############################################################################
@@ -147,3 +213,6 @@ if __name__ == '__main__':
 
     print('\nMOVING IMAGES TO DATA REPO')
     copy_images_to_data_repo(data_sources)
+
+    print('\nGENERATING STATS')
+    generate_stats(data_sources)
