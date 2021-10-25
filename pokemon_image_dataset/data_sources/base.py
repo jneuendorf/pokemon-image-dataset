@@ -1,14 +1,11 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-import shutil
 from typing import Iterable
 
 from pokemon_image_dataset.form import POKEMON_FORMS, DISMISS_FORM
 from pokemon_image_dataset.utils import (
     parse_ndex,
-    readlink,
     verify_sha256_checksum,
-    with_stem,
 )
 from .path_dict import PathDict
 
@@ -53,7 +50,7 @@ class DataSource(ABC):
         #  the developer can solve issues with chained renames
         for filename in sorted(self.get_files()):
             if filename.is_symlink():
-                print('dismissing detected symlink', filename, '=>', readlink(filename))
+                print('dismissing detected symlink', filename, '=>', filename.readlink())
                 filename.unlink()
             else:
                 stem = filename.stem
@@ -77,7 +74,7 @@ class DataSource(ABC):
 
                     # Avoid unnecessary renames
                     if form.complete_name != stem:
-                        rename_to = with_stem(filename, form.complete_name)
+                        rename_to = filename.with_stem(form.complete_name)
                         print('rename:', filename, rename_to)
                         filename.rename(rename_to)
 

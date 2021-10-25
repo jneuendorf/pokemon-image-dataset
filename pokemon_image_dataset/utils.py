@@ -1,5 +1,4 @@
 import hashlib
-import os
 import shutil
 from pathlib import Path
 from typing import Union, Sequence, Tuple, List
@@ -72,19 +71,6 @@ def replace_children_with_grandchildren(parent: Path) -> None:
         shutil.move(str(grandchild), str(parent))
     for child_dir in child_dirs:
         shutil.rmtree(child_dir)
-
-
-def with_stem(path: Path, stem) -> Path:
-    """Polyfill function
-    https://github.com/python/cpython/blob/56c1f6d7edad454f382d3ecb8cdcff24ac898a50/Lib/pathlib.py#L764-L766
-    """
-    return path.with_name(stem + path.suffix)
-
-
-def readlink(path: Path) -> Path:
-    """Polyfill function"""
-    # return Path(os.readlink(str(path.resolve())))
-    return Path(os.readlink(path))
 
 
 ###############################################################################

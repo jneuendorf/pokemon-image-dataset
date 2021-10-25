@@ -5,7 +5,7 @@ from wand.image import Image
 
 from pokemon_image_dataset.data_sources import SpriteSetDataSource, SpriteSetConfig, PathDict
 from pokemon_image_dataset.form import DISMISS_FORM, Form, get_form
-from pokemon_image_dataset.utils import FORM_NAME_DELIMITER, name, with_stem
+from pokemon_image_dataset.utils import FORM_NAME_DELIMITER, name
 
 
 class BattlersDataSource(SpriteSetDataSource):
@@ -60,7 +60,7 @@ class BattlersDataSource(SpriteSetDataSource):
                 frame = img[x:x+frame_width, 0:frame_height]
                 frame.format = 'png'
                 frame.save(
-                    filename=with_stem(filename, name(filename.stem, str(i))),
+                    filename=filename.with_stem(name(filename.stem, str(i))),
                 )
             filename.unlink()
 
