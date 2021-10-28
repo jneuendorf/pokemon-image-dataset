@@ -11,12 +11,12 @@ start happening from generation 5:
     => 521, 592, 593, 668, 678, 876
 """
 
-from dataclasses import dataclass
 import itertools
-from typing import Any, Dict, Union
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Union, TypedDict, List, Optional
 
-from pokemon_image_dataset.utils import name
-
+from pokemon_image_dataset.utils import name, NAME_DELIMITER
 
 DISMISS_FORM = object()
 
@@ -36,54 +36,90 @@ class Form:
     HISUI = 'hisui'
 
 
+class PokemonFormKwargs(TypedDict):
+    ndex: int
+    form_name: str
+    color_only: bool
+
+
 @dataclass
 class PokemonForm:
     """Specifies an appearance of a pokemon."""
 
     ndex: int
-    name: str
+    form_name: str
     color_only: bool = False
 
     @property
-    def complete_name(self):
-        if self.name == Form.NORMAL:
+    def name(self):
+        if self.form_name == Form.NORMAL:
             return f'{self.ndex}'
         else:
-            return name(str(self.ndex), self.name)
+            return name(str(self.ndex), self.form_name)
+
+
+@dataclass
+class PokemonImage:
+    """Specifies a concrete image of a pokemon.
+    This class implies the image's filename.
+    """
+    form: PokemonForm
+    data_source: 'SpriteSetDataSource'
+    sprite_set: str
+    """A key of 'self.data_source.sprite_sets'."""
+    frame: int = None
+    format: str = '.png'
+
+    @property
+    def filename(self) -> str:
+        stem = NAME_DELIMITER.join([
+            str(self.form.ndex),
+            self.form.form_name,
+            str(self.frame) if self.frame is not None else '',
+        ])
+        return f'{stem}{self.format}'
+
+    @property
+    def path(self) -> Path:
+        return self.data_source.get_dest(self.sprite_set) / self.filename
 
 
 class NoNormal(tuple):
-    ...
+    pass
 
 
-def to_kwargs(form_descriptor: Union[str, Dict[str, Any], ]):
+def to_kwargs(form_descriptor: Union[str, Dict[str, Any]]) -> PokemonFormKwargs:
     """Converts a form descriptor to kwargs suitable for a PokemonForm instance."""
     if isinstance(form_descriptor, str):
-        kwargs = dict(name=form_descriptor)
+        kwargs = dict(form_name=form_descriptor)
     elif isinstance(form_descriptor, dict):
         assert all(isinstance(key, str) for key in form_descriptor.keys()), (
             'dict with non-string keys cannot be used as kwargs'
         )
         kwargs = form_descriptor
+    else:
+        raise ValueError(
+            f'Invalid form_descriptor {form_descriptor} ({type(form_descriptor)})'
+        )
     return kwargs
 
 
-def get_instances(ndex, form_descriptors: Union[str, tuple]):
+def get_instances(ndex, form_descriptors: Union[str, tuple]) -> List[PokemonForm]:
     if not isinstance(form_descriptors, tuple):
         form_descriptors = (form_descriptors,)
-
+    # Must be after "is tuple" check
     if not isinstance(form_descriptors, NoNormal):
         form_descriptors = (Form.NORMAL, *form_descriptors)
 
-    return tuple(
+    return [
         PokemonForm(ndex=ndex, **to_kwargs(form))
         for form in form_descriptors
-    )
+    ]
 
 
-def get_forms(forms_by_ndex):
-    default_forms = {
-        ndex: (PokemonForm(ndex=ndex, name=Form.NORMAL), )
+def get_forms(forms_by_ndex) -> Dict[int, List[PokemonForm]]:
+    default_forms: Dict[int, List[PokemonForm]] = {
+        ndex: [PokemonForm(ndex=ndex, form_name=Form.NORMAL)]
         for ndex in range(1, max(forms_by_ndex.keys()) + 1)
     }
     return {
@@ -95,35 +131,30 @@ def get_forms(forms_by_ndex):
     }
 
 
-GET_FORM_SENTINEL = object()
-
-
-def get_form(ndex: int, form_name: str, default=GET_FORM_SENTINEL) -> PokemonForm:
+def get_form(ndex: int, form_name: str, strict=True) -> Optional[PokemonForm]:
     forms = POKEMON_FORMS[ndex]
-    matches = [f for f in forms if f.name == form_name]
-    if len(matches) == 0 and default is not GET_FORM_SENTINEL:
-        return default
+    matches = [f for f in forms if f.form_name == form_name]
+    if not matches and not strict:
+        return None
     else:
-        assert len(
-            matches) == 1, (
-                f'got {len(matches)} matching forms instead 1 for {name(str(ndex), form_name)}'
-            )
+        assert len(matches) == 1, (
+            f'got {len(matches)} matching forms instead 1 for {name(str(ndex), form_name)}'
+        )
         return matches[0]
 
 
-def no_normal(*forms):
+def no_normal(*forms) -> NoNormal:
     return NoNormal(forms)
 
 
-def color_only(*forms):
-    return tuple(
+def color_only(*forms) -> List[PokemonFormKwargs]:
+    return [
         {**to_kwargs(form), 'color_only': True}
         for form in forms
-    )
+    ]
 
 
-
-
+#####################################################################
 POKEMON_FORMS = get_forms({
     3: (Form.MEGA, Form.GIGANTAMAX),  # Venusaur
     6: (Form.MEGA_X, Form.MEGA_Y, Form.GIGANTAMAX),  # Charizard

@@ -57,9 +57,9 @@ def remove_adjacent_duplicates(data_sources: List[SpriteSetDataSource]) -> None:
 
     for data_source in data_sources:
         print(f'removing duplicates for {data_source.__class__.__name__}')
-        for src, conf in data_source.sprite_sets.items():
+        for src in data_source.sprite_sets:
             duplicates = set()
-            dest = data_source.get_dest(conf, Path(src).name)
+            dest = data_source.get_dest(src)
             print('searching for duplicates in', dest)
             files = list(sorted(
                 dest.iterdir(),
@@ -129,51 +129,38 @@ def generate_stats(data_sources: List[SpriteSetDataSource]) -> None:
     This way, errors/inconsistencies should become obvious more easily.
     """
 
-    # battlers = data_sources[-1]
-    # dest = battlers.get_dest(battlers.sprite_sets['Front'], '')
-    # data = (
-    #     set(DATA_REPO_DIR.glob(f'*/{dest.name}{NAME_DELIMITER}*.png'))
-    #     | set(DATA_REPO_DIR.glob(f'*/{dest.name}.png'))
-    # )
-    # data = {name(f.parent.name, f.name.replace(f'3d-battlers-animated{NAME_DELIMITER}', '')) for f in data}
-    # tmp = {f.name for f in battlers.get_files()}
-    # print('data', len(data))
-    # print('tmp', len(set(battlers.get_files())))
-    # pprint(data - tmp)
-    # return
-
     stats = {
         'images': sum(1 for _ in DATA_REPO_DIR.glob('*/*.png')),
         # TODO: seems to be wrong for battlers
         'images_per_sprite_set': {
-            data_source.get_dest(conf, Path(src).name).name: (
+            data_source.get_dest(src).name: (
                 sum(1 for _ in DATA_REPO_DIR.glob(
-                    f'*/{data_source.get_dest(conf, Path(src).name).name}{NAME_DELIMITER}*.png'
+                    f'*/{data_source.get_dest(src).name}{NAME_DELIMITER}*.png'
                 ))
                 + sum(1 for _ in DATA_REPO_DIR.glob(
-                    f'*/{data_source.get_dest(conf, Path(src).name).name}.png'
+                    f'*/{data_source.get_dest(src).name}.png'
                 ))
             )
             for data_source in data_sources
-            for src, conf in data_source.sprite_sets.items()
+            for src in data_source.sprite_sets
         },
         'pokemon_per_sprite_set': {
-            data_source.get_dest(conf, Path(src).name).name: (
+            data_source.get_dest(src).name: (
                 sum(1 for _ in {
                     filename.parent.name
                     for filename in DATA_REPO_DIR.glob(
-                        f'*/{data_source.get_dest(conf, Path(src).name).name}{NAME_DELIMITER}*.png'
+                        f'*/{data_source.get_dest(src).name}{NAME_DELIMITER}*.png'
                     )
                 })
                 + sum(1 for _ in {
                     filename.parent.name
                     for filename in DATA_REPO_DIR.glob(
-                        f'*/{data_source.get_dest(conf, Path(src).name).name}.png'
+                        f'*/{data_source.get_dest(src).name}.png'
                     )
                 })
             )
             for data_source in data_sources
-            for src, conf in data_source.sprite_sets.items()
+            for src in data_source.sprite_sets
         },
         'images_per_pokemon': {
             int(ndex.name): sum(1 for _ in ndex.glob('*.png'))

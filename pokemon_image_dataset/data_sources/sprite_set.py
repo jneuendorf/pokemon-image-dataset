@@ -24,9 +24,6 @@ class SpriteSetConfig:
     in the specified order.
     """
 
-    def get_dest(self, default: str = None) -> str:
-        return self.dest if self.dest is not None else default
-
 
 class SpriteSetDataSource(RemoteArchiveDataSource):
     sprite_sets: Dict[str, SpriteSetConfig] = {}
@@ -42,34 +39,34 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
         """
 
         for src, conf in self.sprite_sets.items():
-            src = self.root / src
+            root = self.root / src
             pattern = conf.glob
             extra = conf.extra
-            dest = self.get_dest(conf, src.name)
+            dest = self.get_dest(src)
             if dest.exists():
                 print('deleting existing', dest)
                 shutil.rmtree(dest)
             dest.mkdir(parents=True, exist_ok=True)
-            for file in src.glob(pattern):
+            for file in root.glob(pattern):
                 shutil.move(file, dest / file.name)
             for extra_src, extra_dest in extra.items():
-                shutil.move(src / extra_src, dest / extra_dest)
+                shutil.move(root / extra_src, dest / extra_dest)
 
         shutil.rmtree(self.root)
 
-    def get_dest(self, conf: SpriteSetConfig, default: str) -> Path:
-        return self.tmp_dir / (
-            conf.dest
-            if conf.dest
-            else default
-        )
+    def get_dest(self, sprite_set: str, root: Path = None) -> Path:
+        if root is None:
+            root = self.tmp_dir
+
+        conf = self.sprite_sets[sprite_set]
+        return root / (conf.dest or Path(sprite_set).name)
 
     def get_files(self):
         for src in self.sprite_sets:
             yield from self.get_sprite_set_files(src)
 
     def get_sprite_set_files(self, src: str):
-        yield from self.get_dest(self.sprite_sets[src], Path(src).name).iterdir()
+        yield from self.get_dest(src).iterdir()
 
     def post_process(self):
         for src, conf in self.sprite_sets.items():
@@ -109,8 +106,8 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
             (form, [(0, 0)]) if isinstance(form, PokemonForm) else form
             for form in forms
         ]
-        dest = self.get_dest(self.sprite_sets[src], Path(src).name)
+        dest = self.get_dest(src)
         for form, coords in forms_an_coords:
-            filename = dest / f'{form.complete_name}.png'
+            filename = dest / f'{form.name}.png'
             print('whitening area of', filename, 'at', coords)
             whiten_areas(filename, coords)

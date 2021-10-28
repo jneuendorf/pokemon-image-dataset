@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterable
 
-from pokemon_image_dataset.form import POKEMON_FORMS, DISMISS_FORM
+from pokemon_image_dataset.form import POKEMON_FORMS, DISMISS_FORM, PokemonForm
 from pokemon_image_dataset.utils import (
     parse_ndex,
     verify_sha256_checksum,
@@ -55,30 +55,28 @@ class DataSource(ABC):
             else:
                 stem = filename.stem
                 form = assigned_forms[filename]
+                found_form: PokemonForm
                 if form is None:
                     ndex = self.parse_ndex(stem)
-                    forms = [
-                        form
-                        for form in POKEMON_FORMS[ndex]
-                        if form.complete_name == stem
-                    ]
+                    forms = [f for f in POKEMON_FORMS[ndex] if f.name == stem]
                     assert len(forms) == 1, (
                         f'got {len(forms)} matching forms instead 1 for {filename}'
                     )
-                    form = forms[0]
+                    found_form = forms[0]
+                else:
+                    found_form = form
 
-                if form is DISMISS_FORM:
+                if found_form is DISMISS_FORM:
                     print('dismissing', filename)
                     filename.unlink()
                 else:
-
                     # Avoid unnecessary renames
-                    if form.complete_name != stem:
-                        rename_to = filename.with_stem(form.complete_name)
+                    if found_form.name != stem:
+                        rename_to = filename.with_stem(found_form.name)
                         print('rename:', filename, rename_to)
                         filename.rename(rename_to)
 
-    def assign_forms(self) -> PathDict:
+    def assign_forms(self) -> PathDict[PokemonForm]:
         return PathDict()
 
     @abstractmethod

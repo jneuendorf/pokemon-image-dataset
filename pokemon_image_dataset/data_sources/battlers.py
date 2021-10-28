@@ -72,7 +72,7 @@ class BattlersDataSource(SpriteSetDataSource):
                 **{
                     str(i).zfill(3): get_form(i, Form.NORMAL)
                     for i in range(1, 807 + 1)
-                    if get_form(i, Form.NORMAL, default=None)
+                    if get_form(i, Form.NORMAL, strict=False)
                 },
                 **{
                     '003_1': get_form(3, Form.MEGA),
