@@ -12,17 +12,23 @@ start happening from generation 5:
 """
 
 import itertools
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Union, TypedDict, List, Optional
+from typing import Any, Union, TypedDict, Optional, TYPE_CHECKING
 
-from pokemon_image_dataset.utils import name, NAME_DELIMITER
+from wand.image import Image
+
+from pokemon_image_dataset.utils import name, NAME_DELIMITER, get_bbox
+
+if TYPE_CHECKING:
+    from pokemon_image_dataset.data_sources import DataSource, SpriteSetDataSource
 
 DISMISS_FORM = object()
 
 
 class Form:
-    NORMAL = '__normal__'
+    NORMAL = 'normal'
     # normal is implicit as there currently is no non-normal female form
     # with significant differences
     FEMALE = 'female'
@@ -42,7 +48,7 @@ class PokemonFormKwargs(TypedDict):
     color_only: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class PokemonForm:
     """Specifies an appearance of a pokemon."""
 
@@ -58,37 +64,134 @@ class PokemonForm:
             return name(str(self.ndex), self.form_name)
 
 
-@dataclass
-class PokemonImage:
+@dataclass(frozen=True)
+class BasePokemonImage(ABC):
     """Specifies a concrete image of a pokemon.
-    This class implies the image's filename.
+    This class implies the image's target filename.
     """
+    data_source: 'DataSource'
     form: PokemonForm
+    source_file: Path
+
+    def __lt__(self, other):
+        if isinstance(other, BasePokemonImage):
+            try:
+                return self.sort_key < other.sort_key
+            except TypeError:
+                print('image __lt__ ??')
+                print(self, other)
+                print(self.sort_key, other.sort_key)
+                raise
+        else:
+            return NotImplemented
+
+    def __str__(self):
+        return f'{self.__class__.__name__}({str(self.filename)})'
+
+    @property
+    def sort_key(self) -> tuple:
+        return (
+            self.data_source.__class__.__name__,
+            self.form.ndex,
+            self.form.form_name,
+        )
+
+    @property
+    def bbox(self) -> tuple[Any, ...]:
+        with Image(filename=self.source_file) as image:
+            return get_bbox(image)
+
+    # @abstractmethod
+    # def split(
+    #     self,
+    #     callback: Callable[
+    #         ['BasePokemonImage'],
+    #         Collection[Union[Path, 'BasePokemonImage']]
+    #     ],
+    # ) -> Collection['BasePokemonImage']:
+    #     ...
+
+    @property
+    @abstractmethod
+    def filename(self) -> str:
+        ...
+
+    # @property
+    # @abstractmethod
+    # def path(self) -> Path:
+    #     ...
+
+
+class PokemonImageKwargs(TypedDict):
+    source_file: Path
+    data_source: Optional['SpriteSetDataSource']
+    form: Optional[PokemonForm]
+    format: Optional[str]
+    sprite_set: Optional[str]
+    frame: Optional[int]
+
+
+@dataclass(frozen=True)
+class PokemonImage(BasePokemonImage):
     data_source: 'SpriteSetDataSource'
+    form: PokemonForm
+    source_file: Path
     sprite_set: str
     """A key of 'self.data_source.sprite_sets'."""
-    frame: int = None
+    frame: Optional[int] = None
     format: str = '.png'
+
+    # def split(
+    #     self,
+    #     callback: Callable[
+    #         ['PokemonImage'],
+    #         Collection[Union[Path, 'PokemonImage', None]]
+    #     ],
+    # ) -> list['PokemonImage']:
+    #     return [
+    #         PokemonImage(
+    #             source_file=filename_or_image,
+    #             data_source=self.data_source,
+    #             form=self.form,
+    #             sprite_set=self.sprite_set,
+    #             frame=self.frame,
+    #             format=self.format,
+    #         )
+    #         if isinstance(filename_or_image, Path)
+    #         else filename_or_image
+    #         for filename_or_image in callback(self)
+    #         if filename_or_image is not None
+    #     ]
+
+    @property
+    def sort_key(self) -> tuple:
+        return *super().sort_key, self.frame is self.frame if not None else 0
 
     @property
     def filename(self) -> str:
-        stem = NAME_DELIMITER.join([
-            str(self.form.ndex),
-            self.form.form_name,
-            str(self.frame) if self.frame is not None else '',
-        ])
+        assert self.format == self.source_file.suffix, "source file's suffix doesn't match format"
+        stem = NAME_DELIMITER.join(
+            part
+            for part in [
+                self.sprite_set,
+                self.form.form_name if self.form.form_name != Form.NORMAL else None,
+                str(self.frame) if self.frame is not None else None,
+            ]
+            if part
+        )
         return f'{stem}{self.format}'
 
-    @property
-    def path(self) -> Path:
-        return self.data_source.get_dest(self.sprite_set) / self.filename
+    # @property
+    # def path(self) -> Path:
+    #     # print(self.data_source, self.sprite_set, self.filename)
+    #     return self.data_source.get_dest(self.sprite_set) / self.filename
 
 
 class NoNormal(tuple):
     pass
 
 
-def to_kwargs(form_descriptor: Union[str, Dict[str, Any]]) -> PokemonFormKwargs:
+def to_kwargs(form_descriptor: Union[str, dict[str, Any]]) -> PokemonFormKwargs:
     """Converts a form descriptor to kwargs suitable for a PokemonForm instance."""
     if isinstance(form_descriptor, str):
         kwargs = dict(form_name=form_descriptor)
@@ -104,7 +207,7 @@ def to_kwargs(form_descriptor: Union[str, Dict[str, Any]]) -> PokemonFormKwargs:
     return kwargs
 
 
-def get_instances(ndex, form_descriptors: Union[str, tuple]) -> List[PokemonForm]:
+def get_instances(ndex, form_descriptors: Union[str, tuple]) -> list[PokemonForm]:
     if not isinstance(form_descriptors, tuple):
         form_descriptors = (form_descriptors,)
     # Must be after "is tuple" check
@@ -117,8 +220,8 @@ def get_instances(ndex, form_descriptors: Union[str, tuple]) -> List[PokemonForm
     ]
 
 
-def get_forms(forms_by_ndex) -> Dict[int, List[PokemonForm]]:
-    default_forms: Dict[int, List[PokemonForm]] = {
+def get_forms(forms_by_ndex) -> dict[int, list[PokemonForm]]:
+    default_forms: dict[int, list[PokemonForm]] = {
         ndex: [PokemonForm(ndex=ndex, form_name=Form.NORMAL)]
         for ndex in range(1, max(forms_by_ndex.keys()) + 1)
     }
@@ -131,7 +234,7 @@ def get_forms(forms_by_ndex) -> Dict[int, List[PokemonForm]]:
     }
 
 
-def get_form(ndex: int, form_name: str, strict=True) -> Optional[PokemonForm]:
+def get_form(ndex: int, form_name: str, strict: bool = True) -> Optional[PokemonForm]:
     forms = POKEMON_FORMS[ndex]
     matches = [f for f in forms if f.form_name == form_name]
     if not matches and not strict:
@@ -147,7 +250,7 @@ def no_normal(*forms) -> NoNormal:
     return NoNormal(forms)
 
 
-def color_only(*forms) -> List[PokemonFormKwargs]:
+def color_only(*forms) -> list[PokemonFormKwargs]:
     return [
         {**to_kwargs(form), 'color_only': True}
         for form in forms

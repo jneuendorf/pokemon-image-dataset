@@ -47,22 +47,24 @@ class BattlersDataSource(SpriteSetDataSource):
     def parse_ndex(self, filename: str) -> int:
         return super().parse_ndex(filename.replace('_', FORM_NAME_DELIMITER))
 
-    def extract_frames(self, src: str, conf: SpriteSetConfig):
-        for filename in self.get_sprite_set_files(src):
+    # TODO: use image.split
+    def extract_frames(self, src: str, conf: SpriteSetConfig) -> None:
+        # This data source only contains 1 sprite set, thus we can just iterate all images.
+        for poke_image in self.images:
+            filename = poke_image.source_file
             print('extract_frames', filename)
-            img = Image(filename=filename)
-            assert (
-                img.width / img.height).is_integer(), 'invalid/non-integer image ratio'
-            frame_width, frame_height = img.height, img.height
+            with Image(filename=filename) as img:
+                assert (img.width / img.height).is_integer(), 'invalid/non-integer image ratio'
+                frame_width, frame_height = img.height, img.height
 
-            for x in range(0, img.width, frame_width):
-                i = x // frame_width
-                frame = img[x:x+frame_width, 0:frame_height]
-                frame.format = 'png'
-                frame.save(
-                    filename=filename.with_stem(name(filename.stem, str(i))),
-                )
-            filename.unlink()
+                for x in range(0, img.width, frame_width):
+                    i = x // frame_width
+                    frame = img[x:x+frame_width, 0:frame_height]
+                    frame.format = 'png'
+                    frame.save(
+                        filename=filename.with_stem(name(filename.stem, str(i))),
+                    )
+                filename.unlink()
 
     def assign_forms(self):
         return PathDict.with_prefix(

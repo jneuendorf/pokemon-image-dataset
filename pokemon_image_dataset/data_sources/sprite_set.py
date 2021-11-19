@@ -1,23 +1,23 @@
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Collection, Dict, List, Optional, Tuple, Union
+from typing import Collection, Optional, Union
 
-from pokemon_image_dataset.form import PokemonForm
+from pokemon_image_dataset.form import PokemonForm, PokemonImage
 from pokemon_image_dataset.utils import NAME_DELIMITER, get_image_frames, whiten_areas
 from .archive import RemoteArchiveDataSource
 
-PostProcessorSpec = Union[str, Tuple[str, dict]]
+PostProcessorSpec = Union[str, tuple[str, dict]]
 
 
 @dataclass
 class SpriteSetConfig:
     glob: str
     """Glob pattern for relevant image files."""
-    extra: Dict[str, str] = field(default_factory=dict)
+    extra: dict[str, str] = field(default_factory=dict)
     dest: Optional[str] = None
     """Rename sprite set folder."""
-    post_process: List[PostProcessorSpec] = field(default_factory=list)
+    post_process: list[PostProcessorSpec] = field(default_factory=list)
     """Method name or tuples of name and kwargs.
     Method that get called for a sprite set with
         (src: str, conf: SpriteSetConfig, **kwargs)
@@ -25,13 +25,9 @@ class SpriteSetConfig:
     """
 
 
-class SpriteSetDataSource(RemoteArchiveDataSource):
-    sprite_sets: Dict[str, SpriteSetConfig] = {}
+class SpriteSetDataSource(RemoteArchiveDataSource[PokemonImage]):
+    sprite_sets: dict[str, SpriteSetConfig] = {}
     """Keys are folders in the (unpacked) data source."""
-
-    def run(self, force=False):
-        super().run(force)
-        self.post_process()
 
     def arrange(self):
         """Moves sprite set folders into `self.tmp_dir` and
@@ -54,6 +50,18 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
 
         shutil.rmtree(self.root)
 
+    def get_images(self, associated_forms: list[tuple[PokemonForm, Path]]) -> list[PokemonImage]:
+        return [
+            PokemonImage(
+                data_source=self,
+                form=form,
+                source_file=filename,
+                sprite_set=filename.parent.name,
+                format=filename.suffix,
+            )
+            for form, filename in associated_forms
+        ]
+
     def get_dest(self, sprite_set: str, root: Path = None) -> Path:
         if root is None:
             root = self.tmp_dir
@@ -63,10 +71,7 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
 
     def get_files(self):
         for src in self.sprite_sets:
-            yield from self.get_sprite_set_files(src)
-
-    def get_sprite_set_files(self, src: str):
-        yield from self.get_dest(src).iterdir()
+            yield from self.get_dest(src).iterdir()
 
     def post_process(self):
         for src, conf in self.sprite_sets.items():
@@ -82,25 +87,43 @@ class SpriteSetDataSource(RemoteArchiveDataSource):
 
     # POST PROCESSORS
     def split_gif_frames(self, src: str, conf: SpriteSetConfig):
-        for gif in self.get_sprite_set_files(src):
+        def split_image(image: PokemonImage) -> list[PokemonImage]:
+            gif = image.source_file
+            assert gif.suffix == '.gif', f'expected gif image but got {image.source_file}'
+            images = []
             for i, frame in enumerate(get_image_frames(gif)):
                 # Ignore single color frames
                 if frame.colors == 1:
                     print(f'excluding single color frame {i} from {gif}')
                     continue
 
-                frame.save(filename=(
-                    gif
-                    .with_stem(f'{gif.stem}{NAME_DELIMITER}{i}')
-                    .with_suffix('.png')
+                frame_png = gif.with_stem(f'{gif.stem}{NAME_DELIMITER}{i}').with_suffix('.png')
+                frame.save(filename=frame_png)
+                images.append(PokemonImage(
+                    data_source=image.data_source,
+                    form=image.form,
+                    source_file=frame_png,
+                    sprite_set=image.sprite_set,
+                    frame=i,
+                    format='.png',
                 ))
-            gif.unlink()
+            return images
+
+        # TODO: async
+        images_to_replace = {image for image in self.images if image.sprite_set == src}
+        replacements = {
+            replacement
+            for image in images_to_replace
+            for replacement in split_image(image)
+        }
+        assert all(img.source_file.exists() for img in replacements), "some of the split images' files do not exist"
+        self.images = (self.images - images_to_replace) | replacements
 
     def whiten_areas(
         self,
         src: str,
         conf: SpriteSetConfig,
-        forms: Collection[Union[PokemonForm, Tuple[PokemonForm, List[Tuple[int, int]]]]] = (),
+        forms: Collection[Union[PokemonForm, tuple[PokemonForm, list[tuple[int, int]]]]] = (),
     ) -> None:
         forms_an_coords = [
             (form, [(0, 0)]) if isinstance(form, PokemonForm) else form

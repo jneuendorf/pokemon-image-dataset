@@ -84,7 +84,7 @@ def binarize(img: Image) -> Image:
     binary.alpha_channel = 'remove'
 
     binary.type = 'grayscale'
-    binary.black_threshold('White')
+    binary.black_threshold(Color('white'))
     return binary
 
 

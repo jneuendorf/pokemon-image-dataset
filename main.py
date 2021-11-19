@@ -2,6 +2,7 @@ import filecmp
 import json
 import re
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from pprint import pprint
 from typing import List
@@ -12,6 +13,7 @@ from skimage.transform import rescale
 from tqdm import tqdm
 from wand.image import Image
 
+from pokemon_image_dataset.form import PokemonImage
 from pokemon_image_dataset.data_sources import (BattlersDataSource, DataSource, SpriteSetDataSource,
                                                 veekun)
 from pokemon_image_dataset.utils import (FORM_NAME_DELIMITER,
@@ -35,52 +37,58 @@ def run_data_sources(data_sources: List[DataSource]) -> None:
         data_source.run(force=False)
 
 
-def remove_adjacent_duplicates(data_sources: List[SpriteSetDataSource]) -> None:
-    """Finds and removes duplicates within each data source, not across data sources."""
-
-    def filename_key(filename: Path) -> tuple:
-        ndex, *rest = re.split(
-            f'{FORM_NAME_DELIMITER}|{NAME_DELIMITER}',
-            filename.stem,
-        )
-        if rest:
-            try:
-                frame = int(rest[-1])
-                form = name(*rest[:-1])
-            except ValueError:
-                frame = None
-                form = name(*rest)
-        else:
-            frame = None
-            form = ''
-        return int(ndex), form, frame
-
-    for data_source in data_sources:
-        print(f'removing duplicates for {data_source.__class__.__name__}')
-        for src in data_source.sprite_sets:
-            duplicates = set()
-            dest = data_source.get_dest(src)
-            print('searching for duplicates in', dest)
-            files = list(sorted(
-                dest.iterdir(),
-                key=filename_key,
-            ))
-            for a, b in tqdm(zip(files[:-1], files[1:]), total=len(files) - 1):
-                if filecmp.cmp(a, b, shallow=False):
-                    duplicates.add(b)
-            for file in sorted(duplicates):
-                file.unlink()
-                print('removed duplicate', file)
+# def remove_adjacent_duplicates(data_sources: List[SpriteSetDataSource]) -> None:
+#     """Finds and removes duplicates within each data source, not across data sources."""
+#
+#     def filename_key(filename: Path) -> tuple[int, str, int]:
+#         ndex: str
+#         form: str
+#         frame: int
+#
+#         ndex, *rest = re.split(
+#             f'{FORM_NAME_DELIMITER}|{NAME_DELIMITER}',
+#             filename.stem,
+#         )
+#         if rest:
+#             try:
+#                 frame = int(rest[-1])
+#                 form = name(*rest[:-1])
+#             except ValueError:
+#                 frame = -1
+#                 form = name(*rest)
+#         else:
+#             frame = -1
+#             form = ''
+#         return int(ndex), form, frame
+#
+#     for data_source in data_sources:
+#         print(f'removing duplicates for {data_source.__class__.__name__}')
+#         for src in data_source.sprite_sets:
+#             duplicates = set()
+#             dest = data_source.get_dest(src)
+#             print('searching for duplicates in', dest)
+#             # TODO: use data_source.images so only relevant images are regarded!
+#             files = list(sorted(
+#                 dest.iterdir(),
+#                 key=filename_key,
+#             ))
+#             for a, b in tqdm(zip(files[:-1], files[1:]), total=len(files) - 1):
+#                 if filecmp.cmp(a, b, shallow=False):
+#                     duplicates.add(b)
+#             for file in sorted(duplicates):
+#                 file.unlink()
+#                 print('removed duplicate', file)
 
 
 def normalize_image_sizes(data_sources: List[DataSource]) -> None:
     for data_source in data_sources:
         print(f'normalizing image sizes for {data_source.__class__.__name__}')
-        for filename in tqdm(sorted(data_source.get_files())):
-            with Image(filename=filename) as img:
-                bbox = get_bbox(img)
+        # for filename in tqdm(sorted(data_source.get_files())):
+        for poke_image in sorted(data_source.images):
+            filename = poke_image.source_file
+            bbox = poke_image.bbox
 
-            img = imread(filename)
+            img = imread(str(filename))
             if img.shape[-1] == 4:
                 img = rgba2rgb(img)
             elif len(img.shape) == 2 or img.shape[-1] == 1:
@@ -108,19 +116,12 @@ def normalize_image_sizes(data_sources: List[DataSource]) -> None:
 def copy_images_to_data_repo(data_sources: List[DataSource]) -> None:
     for data_source in data_sources:
         print(f'copying images of {data_source.__class__.__name__}')
-        for filename in tqdm(sorted(data_source.get_files())):
-            sprite_set = filename.parent.name
-            ndex, *form = dename(filename.stem)
-            dest_dir = DATA_REPO_DIR / ndex
+        # for filename in tqdm(sorted(data_source.get_files())):
+        for poke_image in sorted(data_source.images):
+            dest_dir = DATA_REPO_DIR / str(poke_image.form.ndex)
             dest_dir.mkdir(parents=True, exist_ok=True)
-            if form:
-                # TODO: fix dashes, i.e. 1/emerald-animated---28.png
-                new_stem = sprite_set + NAME_DELIMITER + name(*form)
-            else:
-                new_stem = sprite_set
-            dest_file_path = dest_dir / filename.with_stem(new_stem).name
-            # print(filename, '->', dest_file_path)
-            shutil.copyfile(filename, dest_file_path)
+            # TODO: CHECK: fix dashes, i.e. 1/emerald-animated---28.png
+            shutil.copyfile(poke_image.source_file, dest_dir / poke_image.filename)
 
 
 def generate_stats(data_sources: List[SpriteSetDataSource]) -> None:

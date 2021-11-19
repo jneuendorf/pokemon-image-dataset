@@ -1,17 +1,19 @@
-from pathlib import Path
 import shutil
+from abc import ABC
+from pathlib import Path
+from typing import Generic
 
 from pokemon_image_dataset.utils import download
-from .base import DataSource
+from .base import DataSource, T
 
 
-class ArchiveDataSource(DataSource):
+class ArchiveDataSource(DataSource, ABC, Generic[T]):
 
     def process(self, archive):
         shutil.unpack_archive(filename=archive, extract_dir=self.root)
 
 
-class RemoteArchiveDataSource(ArchiveDataSource):
+class RemoteArchiveDataSource(ArchiveDataSource, ABC, Generic[T]):
     url = None
 
     def get(self, force):
